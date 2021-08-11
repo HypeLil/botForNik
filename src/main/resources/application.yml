@@ -1,0 +1,27 @@
+bot:
+  token: 1915145187:AAElhoNGuDb3dTYh2SAhp-Dbyr1xSvxkCm0
+  name: captaindroid_bot
+  admin: 127576775
+  chatId: 1001424647300
+  merchantId: 100
+server:
+  port: 8072
+spring:
+  liquibase:
+    enabled: true
+    contexts: test
+  jpa:
+    properties:
+      hibernate.show_sql: false
+      hibernate:format_sql: false
+    open-in-view: false
+    hibernate.ddl-auto: none
+  datasource:
+    #  Note that the hostname, port and database name on url property and username and password properties will be ignored
+    #  and it will be used default container values
+    url: jdbc:postgresql://localhost:5432/botter1234?user=nikita&password=91823God&currentSchema=public
+    driver-class-name: org.postgresql.Driver
+    username: nikita
+    password: 91823God
+    hikari:
+      schema: public
