@@ -1,8 +1,7 @@
 bot:
-  token: 1915145187:AAElhoNGuDb3dTYh2SAhp-Dbyr1xSvxkCm0
-  name: captaindroid_bot
-  admin: 127576775
-  chatId: 1001424647300
+  token: 1452112048:AAE4lwlyOHyHttqYhCuUhMwoIDuANkMC0Co
+  name: hypelil_bot
+  admin: 213411446
   merchantId: 100
 server:
   port: 8072
@@ -12,16 +11,16 @@ spring:
     contexts: test
   jpa:
     properties:
-      hibernate.show_sql: false
+      hibernate.show_sql: true
       hibernate:format_sql: false
     open-in-view: false
     hibernate.ddl-auto: none
   datasource:
     #  Note that the hostname, port and database name on url property and username and password properties will be ignored
     #  and it will be used default container values
-    url: jdbc:postgresql://localhost:5432/botter1234?user=nikita&password=91823God&currentSchema=public
+    url: jdbc:postgresql://localhost:5555/bo1?user=postgres&password=91823God&currentSchema=public
     driver-class-name: org.postgresql.Driver
-    username: nikita
+    username: postgres
     password: 91823God
     hikari:
       schema: public

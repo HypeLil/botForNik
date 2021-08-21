@@ -14,4 +14,14 @@ public interface JpaParticipantRepository extends JpaRepository<Participant, Int
 
     @Query("SELECT p FROM Participant p WHERE p.auction = :auc")
     List<Participant> findByAuction(@Param("auc") Auction auction);
+
+    @Query("SELECT p FROM Participant p " +
+            "WHERE p.auction = :auc " +
+            "ORDER BY p.betMoney ASC")
+    List<Participant> findByAuctionLeader(@Param("auc") Auction auction);
+
+    @Query("SELECT p FROM Participant p " +
+            "WHERE p.user.userId = :id " +
+            "AND p.auction = :auc")
+    Participant findByUserIdAndAuction(@Param("auc") Auction auction, @Param("id") int userId);
 }

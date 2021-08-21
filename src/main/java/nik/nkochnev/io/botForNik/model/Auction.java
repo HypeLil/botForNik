@@ -34,8 +34,14 @@ public class Auction {
     @Column(name = "last_bet")
     private LocalDateTime lastBet;
 
+    @Column(name = "seconds")
+    private long seconds;
+
     @Column(name = "ended")
     private boolean ended;
+
+    @Column(name = "start_sum")
+    private int startSum;
 
     @OneToMany(
             cascade = CascadeType.ALL,
@@ -44,9 +50,33 @@ public class Auction {
     )
     private List<Participant> participants;
 
+    @OneToMany(
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            mappedBy = "auction"
+    )
+    private List<Winner> winners;
+
     public Auction() {
-        startDate = LocalDateTime.now();
-        ended = false;
+        this.startDate = LocalDateTime.now();
+        this.seconds = 180;
+        this.ended = false;
+        this.startSum = 0;
+        this.winnerId = 0;
+    }
+
+    @Override
+    public String toString() {
+        return "Auction{" +
+                "auctionId=" + auctionId +
+                ", startDate=" + startDate +
+                ", thingName='" + thingName + '\'' +
+                ", winnerId=" + winnerId +
+                ", lastBet=" + lastBet +
+                ", seconds=" + seconds +
+                ", ended=" + ended +
+                ", startSum=" + startSum +
+                '}';
     }
 
     @Override

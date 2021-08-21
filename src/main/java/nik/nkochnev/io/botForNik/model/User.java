@@ -33,6 +33,12 @@ public class User {
     @Column(name = "position")
     private String position;
 
+    @Column(name = "username")
+    private String username;
+
+    @Column(name = "last_action")
+    private LocalDateTime lastAction;
+
     public User(int userId) {
         this.userId = userId;
         this.regDate = LocalDateTime.now();
@@ -53,6 +59,26 @@ public class User {
             mappedBy = "user"
     )
     private List<Participant> participants;
+
+    @OneToMany(
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            mappedBy = "user"
+    )
+    private List<Winner> winners;
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "userId=" + userId +
+                ", money=" + money +
+                ", regDate=" + regDate +
+                ", email='" + email + '\'' +
+                ", position='" + position + '\'' +
+                ", username='" + username + '\'' +
+                ", lastAction=" + lastAction +
+                '}';
+    }
 
     @Override
     public boolean equals(Object o) {

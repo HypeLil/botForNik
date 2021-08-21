@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import nik.nkochnev.io.botForNik.model.Auction;
 import nik.nkochnev.io.botForNik.model.Participant;
 import nik.nkochnev.io.botForNik.repo.JpaParticipantRepository;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -36,5 +37,12 @@ public class ParticipantServiceImpl {
         participant.setBetMoney(sum);
         save(participant);
         return true;
+    }
+
+    public List<Participant> findByAuctionLeader(@Param("auc") Auction auction){
+        return participantRepository.findByAuctionLeader(auction);
+    }
+    public Participant findByUserIdAndAuction(Auction auction, int userId){
+        return participantRepository.findByUserIdAndAuction(auction, userId);
     }
 }
