@@ -1,18 +1,21 @@
 package nik.nkochnev.io.botForNik.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import nik.nkochnev.io.botForNik.model.Auction;
 import nik.nkochnev.io.botForNik.model.Participant;
 import nik.nkochnev.io.botForNik.repo.JpaParticipantRepository;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ParticipantServiceImpl {
 
     private final JpaParticipantRepository participantRepository;
@@ -39,10 +42,10 @@ public class ParticipantServiceImpl {
         return true;
     }
 
-    public List<Participant> findByAuctionLeader(@Param("auc") Auction auction){
+    public Participant findByAuctionLeader(Auction auction){
         return participantRepository.findByAuctionLeader(auction);
     }
-    public Participant findByUserIdAndAuction(Auction auction, int userId){
+    public List<Participant> findByUserIdAndAuction(Auction auction, int userId){
         return participantRepository.findByUserIdAndAuction(auction, userId);
     }
 }

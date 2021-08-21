@@ -27,9 +27,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Component
@@ -102,13 +100,22 @@ public class Bot extends TelegramLongPollingBot {
             }
             else if (command.split("_").length > 1
                     && command.split("_")[0].equals("participant")){
-                sendMessage(participant(update));
+                sendMessage(participantImpl(update));
             }
         }
     }
 
     public void handleMessage(int userId, Update update){
         Optional<User> user = userService.findById(userId);
+
+        if ("Назад".equalsIgnoreCase(update.getMessage().getText()) &&
+                admin.equalsIgnoreCase(String.valueOf(update.getMessage().getFrom().getId()))){
+            final var user1 = user.get();
+            user1.setPosition("start");
+            userService.save(user1);
+
+            sendMessage(adminPanel.start(update));
+        }
 
         if (user.isPresent()){
             if ("payment".equalsIgnoreCase(user.get().getPosition())){
@@ -122,10 +129,6 @@ public class Bot extends TelegramLongPollingBot {
             }
             else if ("add_auction".equalsIgnoreCase(user.get().getPosition())){
                sendMessage(adminPanel.addAuctionImpl(update));
-            }
-            else if (user.get().getPosition().split("_").length > 1
-            && "participant".equalsIgnoreCase(user.get().getPosition().split("_")[0])){
-                sendMessage(participantImpl(update));
             }
         } else {
             User us = new User(userId);
@@ -367,6 +370,7 @@ public class Bot extends TelegramLongPollingBot {
         if (auctionList.isEmpty()){
             sendMessage.setText("Активных аукционов нет \n");
             sendMessage(sendMessage);
+            return;
         }
 
         for (Auction auction : auctionList){
@@ -401,17 +405,20 @@ public class Bot extends TelegramLongPollingBot {
 
         List<Participant> participants = participantService.findByAuction(auction);
         String bets = "";
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
         if (participants.isEmpty()) bets = "Ставок еще нет";
         else {
             StringBuilder sb = new StringBuilder();
             final var collect = participants.stream()
                     .limit(10)
+                    .sorted(Comparator.comparing(Participant::getBetTime))
                     .collect(Collectors.toList());
+            Collections.reverse(collect);
             for (Participant p : collect) {
                 sb.append(p.getBetTime().format(formatter)).append(" - ")
-                        .append(p.getUser().getUsername()).append(" \uD83D\uDCB0Сумма: ").append(p.getBetMoney());
+                        .append(p.getUser().getUsername())
+                        .append("\n");
             }
             bets = sb.toString();
         }
@@ -430,7 +437,7 @@ public class Bot extends TelegramLongPollingBot {
 
                 if (!participants.isEmpty()){
                     sb.append("\n\uD83D\uDC51Лидер: ").append(participantService
-                            .findByAuctionLeader(auction).get(0).getUser().getUsername());
+                            .findByAuctionLeader(auction).getUser().getUsername());
                 } else sb.append("\n\uD83D\uDC51Лидер: лидера нет");
 
                 sb.append("\nПредыдущие ставки:").append("\n").append(bets);
@@ -458,49 +465,16 @@ public class Bot extends TelegramLongPollingBot {
         return sendMessage;
     }
 
-    public SendMessage participant(Update update){
-        SendMessage sendMessage = new SendMessage();
-        String userId = String.valueOf(update.getCallbackQuery().getFrom().getId());
-        String auctionId = update.getCallbackQuery().getData().split("_")[1];
-
-        sendMessage.setChatId(userId);
-        User user = userService.findById(Integer.valueOf(userId)).get();
-        Optional<Auction> auction = auctionService.findById(Integer.valueOf(auctionId));
-
-        if (auction.isEmpty()){
-            sendMessage.setText("Аукцион закончился");
-            return sendMessage;
-        }
-
-        user.setPosition("participant_" + auctionId);
-        userService.save(user);
-        sendMessage.setText("У вас на счете: \uD83D\uDCB0" + user.getMoney() + "\n" +
-                "Введите сумму ставки\n" +
-                "Предыдущая ставка: " + auction.get().getStartSum());
-
-        return sendMessage;
-    }
-
     public SendMessage participantImpl(Update update) {
         SendMessage sendMessage = new SendMessage();
-        String userId = String.valueOf(update.getMessage().getFrom().getId());
-        String sum = update.getMessage().getText();
-        int sumInDouble = Integer.parseInt(sum);
+        String auctionId =  update.getCallbackQuery().getData().split("_")[1];
+        String userId = String.valueOf(update.getCallbackQuery().getFrom().getId());
 
         sendMessage.setChatId(userId);
         Optional<User> user = userService.findById(Integer.parseInt(userId));
-
         final var user1 = user.get();
 
-        if (user1.getMoney() < sumInDouble){
-            user1.setPosition("start");
-            userService.save(user1);
-            sendMessage.setText("У вас недостаточно на счете!\n" +
-                    "Не хватает: " + (sumInDouble - user1.getMoney()));
-            return sendMessage;
-        }
-
-        Optional<Auction> auction = auctionService.findById(Integer.valueOf(user1.getPosition().split("_")[1]));
+        Optional<Auction> auction = auctionService.findById(Integer.valueOf(auctionId));
 
         if (auction.isEmpty()){
             user1.setPosition("start");
@@ -510,38 +484,33 @@ public class Bot extends TelegramLongPollingBot {
         }
 
         final var auction1 = auction.get();
-        if (auction1.getStartSum() >= sumInDouble){
+        int sum = 100;
+
+        if (user1.getMoney() < sum){
             user1.setPosition("start");
             userService.save(user1);
-            sendMessage.setText("Ваша ставка должна быть больше предыдущей!\n" +
-                    "Предыдущая ставка: " + auction1.getStartSum());
+            sendMessage.setText("У вас недостаточно на счете!\n" +
+                    "Не хватает: " + (sum - user1.getMoney()));
             return sendMessage;
         }
 
-        Participant participant = participantService.findByUserIdAndAuction(auction1, Integer.parseInt(userId));
+        Participant participant = new Participant();
+        participant.setUser(user1);
+        participant.setBetMoney(sum);
+        participant.setAuction(auction1);
+        participant.setBetTime(LocalDateTime.now());
+        participantService.save(participant);
 
-        if (participant == null){
-            Participant p = new Participant();
-            p.setAuction(auction.get());
-            p.setUser(user1);
-            p.setBetMoney(sumInDouble);
-            p.setBetTime(LocalDateTime.now());
-            participantService.save(p);
-        } else {
-            participant.setBetMoney(sumInDouble);
-            participant.setBetTime(LocalDateTime.now());
-            participantService.save(participant);
-        }
-        auction1.setStartSum(sumInDouble);
+        user1.setMoney(user1.getMoney() - sum);
+
+        auction1.setStartSum(sum);
         auction1.setSeconds(180);
         auction1.setLastBet(LocalDateTime.now());
         auctionService.save(auction1);
 
-        user1.setPosition("start");
-        user1.setMoney(user1.getMoney() - sumInDouble);
         userService.save(user1);
 
-        sendMessage.setText("Вы поставили " + sumInDouble + "\n У вас на счете: " + user1.getMoney());
+        sendMessage.setText("Вы поставили " + sum + "\n У вас на счете: " + user1.getMoney());
         return sendMessage;
     }
 
@@ -556,22 +525,21 @@ public class Bot extends TelegramLongPollingBot {
                         if (auction.getSeconds() <= 0) {
                             auction.setEnded(true);
                             auctionService.save(auction);
-                            List<Participant> participant = participantService.findByAuctionLeader(auction);
+                            Participant participant = participantService.findByAuctionLeader(auction);
 
-                            if (participant.size() >= 1) {
-                                final var participant1 = participant.get(0);
-                                auction.setWinnerId(participant1.getUser().getUserId());
+                            if (participant != null) {
+                                auction.setWinnerId(participant.getUser().getUserId());
                                 auctionService.save(auction);
 
                                 Winner winner = new Winner();
                                 winner.setAuction(auction);
-                                winner.setUser(userService.findById(participant1.getUser().getUserId()).get());
+                                winner.setUser(userService.findById(participant.getUser().getUserId()).get());
                                 winner.setPrized(false);
                                 winnerService.save(winner);
 
                                 SendMessage sendMessage = new SendMessage();
                                 sendMessage.setText("Вы победили в аукционе #" + auction.getAuctionId());
-                                sendMessage.setChatId(String.valueOf(participant1.getUser().getUserId()));
+                                sendMessage.setChatId(String.valueOf(participant.getUser().getUserId()));
                                 sendMessage(sendMessage);
                             }
                             final var byAuction = participantService.findByAuction(auction);
@@ -580,8 +548,7 @@ public class Bot extends TelegramLongPollingBot {
                                 for (Participant p : byAuction) {
                                     final var user = p.getUser();
                                     if (user.getUserId() != auction.getWinnerId()) {
-                                        final var byUserIdAndAuction = participantService.findByUserIdAndAuction(auction, user.getUserId());
-                                        user.setMoney(user.getMoney() + byUserIdAndAuction.getBetMoney());
+                                        user.setMoney(user.getMoney() + p.getBetMoney());
                                         userService.save(user);
                                     }
                                 }

@@ -179,9 +179,9 @@ public class AdminPanel {
         }
 
         StringBuilder sb = new StringBuilder();
-        sb.append("Введите id, кому выдали приз");
+        sb.append("Введите id, кому выдали приз\n");
         for (Winner w : winners){
-            sb.append("Id: ").append(w.getWinnerId()).append("Username: ").append(w.getUser().getUsername())
+            sb.append("Id: ").append(w.getWinnerId()).append(" Username: ").append(w.getUser().getUsername())
                     .append(" Вещь: ").append(w.getAuction().getThingName()).append("\n");
         }
         sendMessage.setText(sb.toString());
@@ -191,7 +191,7 @@ public class AdminPanel {
         user1.setPosition("prized");
         userService.save(user1);
 
-        return sendMessage;
+        return exit(sendMessage);
     }
 
     public SendMessage winnersImpl(Update update){
@@ -210,6 +210,10 @@ public class AdminPanel {
         winner.setPrized(true);
         winnerService.save(winner);
 
+        User user = userService.findById(Integer.valueOf(userId)).get();
+        user.setPosition("start");
+        userService.save(user);
+
         sendMessage.setText("Приз выдан");
         return sendMessage;
     }
@@ -218,6 +222,20 @@ public class AdminPanel {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(update.getMessage().getFrom().getId()));
         sendMessage.setText("Вы вышли из админ-панели");
+        return sendMessage;
+    }
+
+    public SendMessage exit(SendMessage sendMessage){
+        KeyboardRow keyboardRow3 = new KeyboardRow();
+        KeyboardButton keyboardButton3 = new KeyboardButton("Назад");
+        keyboardRow3.add(keyboardButton3);
+
+        keyboard.add(keyboardRow3);
+
+        keyboardMarkup.setKeyboard(keyboard);
+        keyboardMarkup.setResizeKeyboard(true);
+        sendMessage.setReplyMarkup(keyboardMarkup);
+
         return sendMessage;
     }
 }
