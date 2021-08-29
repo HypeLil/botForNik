@@ -29,6 +29,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Component
 @Slf4j
@@ -128,7 +129,10 @@ public class Bot extends TelegramLongPollingBot {
                 sendMessage(adminPanel.winnersImpl(update));
             }
             else if ("add_auction".equalsIgnoreCase(user.get().getPosition())){
-               sendMessage(adminPanel.addAuctionImpl(update));
+                adminPanel.addAuctionImpl(update).forEach(this::sendMessage);
+            }
+            else if("add_money".equalsIgnoreCase(user.get().getPosition())){
+                adminPanel.addMoneyImpl(update);
             }
         } else {
             User us = new User(userId);
@@ -219,6 +223,17 @@ public class Bot extends TelegramLongPollingBot {
         else if ("Список победителей".equals(text)){
             if (admin.equals(String.valueOf(update.getMessage().getFrom().getId()))){
                 sendMessage(adminPanel.winners(update));
+            } else {
+                SendMessage sendMessage = new SendMessage();
+                sendMessage.setChatId(String.valueOf(userId));
+                sendMessage.enableMarkdown(true);
+                sendMessage.setText("Доступ запрещен");
+                sendMessage(sendMessage);
+            }
+        }
+        else if ("Выдать деньги".equals(text)){
+            if (admin.equals(String.valueOf(update.getMessage().getFrom().getId()))){
+                sendMessage(adminPanel.addMoney(update));
             } else {
                 SendMessage sendMessage = new SendMessage();
                 sendMessage.setChatId(String.valueOf(userId));
@@ -349,7 +364,52 @@ public class Bot extends TelegramLongPollingBot {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(userId));
         sendMessage.enableMarkdown(true);
-        sendMessage.setText("Тут у нас правила");
+        sendMessage.setText("Правила аукциона \n" +
+                "\n" +
+                "⛔️ Запрещено:\n" +
+                "1. Писать другим участникам аукциона оскорбительные сообщения, количество своих аукционных ставок, запугивания, а также собираться в группы.\n" +
+                "2) Создавать несколько аккаунтов.\n" +
+                "3) Передавать свой аккаунт другим лицам.\n" +
+                "4) Допускается только 1 отказ от покупки лота после выигрыша.\n" +
+                "5) Использовать программный софт для автоматической перебивки лотов (Автокликеры). При нарушении данного пункта лот может быть аннулирован! ❗️\n" +
+                "\n" +
+                "Лимит обнуляется в 00:00 по мск времени \uD83D\uDD25\n" +
+                "\n" +
+                "В случае если после нарушений вы одерживаете победу, победа над лотом считается «не состоявшейся» и лот будет выставлен на повторные торги.\n" +
+                "\n" +
+                "▫️В случае обнаружения таких нарушений ваш аккаунт может попасть в Бан от 1-3 дней.\n" +
+                "При этом аукционные ставки на балансе возврату не подлежат.\n" +
+                "\n" +
+                "▫️Если вы заметили нарушение, просьба незамедлительно сообщить в Тех.поддержку .\n" +
+                "\n" +
+                "\n" +
+                "❓ Часто задаваемые вопросы:\n" +
+                "\n" +
+                "1. Являются ли товары новыми и оригинальными?\n" +
+                "\n" +
+                "✅ Все лоты, выставляемые на торги в нашем аукционе являются оригинальными и абсолютно новыми, такие же, как вы могли бы приобрести у производителя, либо дилера, только со скидкой до 99%.\n" +
+                "\n" +
+                "2. Почему оригинальный товар стоит так дёшево?\n" +
+                "\n" +
+                "✅ Концепция бота предусматривает оплату за участие в аукционах, за счёт которой компенсируется основная часть стоимости товара, поскольку в аукционе участвует большое количество пользователей, а лот по итогам торгов забирает только один пользователь - победитель.\n" +
+                "\n" +
+                "\n" +
+                "3. Если ставка не сыграла - она «сгорает»?\n" +
+                "\n" +
+                "✅ Если ставка пользователя была перебита другим участником аукциона, пользователь может сделать новую ставку.\n" +
+                "\n" +
+                "4. Я случайно сделал ставку, могу ли отменить её?\n" +
+                "\n" +
+                "✅ Сделанные ставки отменить невозможно, поэтому рекомендуем участвовать только в тех аукционах, которые проводятся по интересующим вас лотам.\n" +
+                "\n" +
+                "5. Возможен ли обмен или возврат товара?\n" +
+                "✅ Возврат или обмен товара, купленного победителем аукциона, возможен в случае выявления каких-либо скрытых дефектов или брака в момент получения товара от перевозчика.\n" +
+                "\n" +
+                "6. Оплатил, но ставки не добавились. Что делать?\n" +
+                "✅ Оплата производится с помощью системы электронных платежей, обычно это не занимает много времени, и ставки добавляются в течение от нескольких секунд до 15 минут, если деньги с вашего баланса списались, а ставки не были добавлены в течение 15 минут, обратитесь тех.поддержку IMPERIAL.\n" +
+                "\n" +
+                "Не нашли ответ на вопрос? \n" +
+                "Обратитесь в тех. поддержку (http://t.me/OptimalniySupport) \uD83D\uDD25");
 
         sendMessage(sendMessage);
     }
@@ -411,16 +471,30 @@ public class Bot extends TelegramLongPollingBot {
         else {
             StringBuilder sb = new StringBuilder();
             final var collect = participants.stream()
-                    .limit(10)
                     .sorted(Comparator.comparing(Participant::getBetTime))
                     .collect(Collectors.toList());
             Collections.reverse(collect);
-            for (Participant p : collect) {
+            final var limit = collect.stream()
+                    .limit(10).collect(Collectors.toList());
+
+            for (Participant p : limit) {
                 sb.append(p.getBetTime().format(formatter)).append(" - ")
                         .append(p.getUser().getUsername())
                         .append("\n");
             }
             bets = sb.toString();
+        }
+
+        long minutes = auction.getSeconds()/60;
+        String mins = "" + minutes;
+        if (minutes < 10){
+            mins = "0" + mins;
+        }
+        long seconds = auction.getSeconds() % 60;
+        String secs = "" + seconds;
+
+        if (seconds < 10){
+            secs = "0" + secs;
         }
 
         StringBuilder sb = new StringBuilder();
@@ -429,15 +503,16 @@ public class Bot extends TelegramLongPollingBot {
                 .append("\nУ нас исключительно оригинальная техника")
                 .append("\nТовар отправляем во все страны")
                 .append("\n\uD83D\uDCCDУчаствуй, чтобы победить")
+                .append("\n\uD83D\uDCB5Ваш баланс: ").append(userService.findById(userId).get().getMoney())
                 .append("\n\nВремя начала: ").append(auction.getStartDate().format(formatter))
                 .append("\n\uD83D\uDCB0Текущая цена: ").append(auction.getStartSum())
-                .append("\n⏳Остаток времени: ").append(auction.getSeconds()/60).append(":").append(auction.getSeconds() % 60)
+                .append("\n⏳Остаток времени: ").append(mins).append(":").append(secs)
                 .append("\n[Обновление раз в 10 секунд]")
                 .append("\n\n----------------------");
 
                 if (!participants.isEmpty()){
                     sb.append("\n\uD83D\uDC51Лидер: ").append(participantService
-                            .findByAuctionLeader(auction).getUser().getUsername());
+                            .findByAuctionLeader(auction.getAuctionId()).getUser().getUsername());
                 } else sb.append("\n\uD83D\uDC51Лидер: лидера нет");
 
                 sb.append("\nПредыдущие ставки:").append("\n").append(bets);
@@ -494,6 +569,12 @@ public class Bot extends TelegramLongPollingBot {
             return sendMessage;
         }
 
+        Participant participantLeader = participantService.findByAuctionLeader(auction1.getAuctionId());
+        if (participantLeader.getUser().getUserId() == Integer.parseInt(userId)){
+            sendMessage.setText("Вы лидер и так!");
+            return sendMessage;
+        }
+
         Participant participant = new Participant();
         participant.setUser(user1);
         participant.setBetMoney(sum);
@@ -525,7 +606,7 @@ public class Bot extends TelegramLongPollingBot {
                         if (auction.getSeconds() <= 0) {
                             auction.setEnded(true);
                             auctionService.save(auction);
-                            Participant participant = participantService.findByAuctionLeader(auction);
+                            Participant participant = participantService.findByAuctionLeader(auction.getAuctionId());
 
                             if (participant != null) {
                                 auction.setWinnerId(participant.getUser().getUserId());

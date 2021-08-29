@@ -16,9 +16,9 @@ public interface JpaParticipantRepository extends JpaRepository<Participant, Int
     List<Participant> findByAuction(@Param("auc") Auction auction);
 
     @Query(nativeQuery = true, value = "SELECT * FROM participants p\n" +
-            "            WHERE p.auction_id = 2\n" +
+            "            WHERE p.auction_id = :auc" +
             "            ORDER BY p.bet_time DESC LIMIT 1")
-    Participant findByAuctionLeader(@Param("auc") Auction auction);
+    Participant findByAuctionLeader(@Param("auc") Integer auction);
 
     @Query("SELECT p FROM Participant p " +
             "WHERE p.user.userId = :id " +

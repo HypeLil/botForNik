@@ -38,6 +38,10 @@ public class AdminPanel {
         sendMessage.setChatId(String.valueOf(update.getMessage().getFrom().getId()));
         sendMessage.setText("Админ-панель:");
 
+        return adminMenu(sendMessage);
+    }
+
+    public SendMessage adminMenu(SendMessage sendMessage){
         KeyboardRow keyboardRow = new KeyboardRow();
         KeyboardButton keyboardButton = new KeyboardButton("Добавить аукцион");
         keyboardRow.add(keyboardButton);
@@ -54,6 +58,10 @@ public class AdminPanel {
         KeyboardButton keyboardButton4 = new KeyboardButton("Список победителей");
         keyboardRow4.add(keyboardButton4);
 
+        KeyboardRow keyboardRow5 = new KeyboardRow();
+        KeyboardButton keyboardButton5 = new KeyboardButton("Выдать деньги");
+        keyboardRow5.add(keyboardButton5);
+
         KeyboardRow keyboardRow3 = new KeyboardRow();
         KeyboardButton keyboardButton3 = new KeyboardButton("Выйти в меню");
         keyboardRow3.add(keyboardButton3);
@@ -62,6 +70,7 @@ public class AdminPanel {
         keyboard.add(keyboardRow1);
         keyboard.add(keyboardRow2);
         keyboard.add(keyboardRow4);
+        keyboard.add(keyboardRow5);
         keyboard.add(keyboardRow3);
 
         keyboardMarkup.setKeyboard(keyboard);
@@ -89,19 +98,23 @@ public class AdminPanel {
         return sendMessage;
     }
 
-    public SendMessage addAuctionImpl(Update update){
+    public List<SendMessage> addAuctionImpl(Update update){
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(update.getMessage().getFrom().getId()));
         String text = update.getMessage().getText();
         Optional<User> user = userService.findById(update.getMessage().getFrom().getId());
         final var admin = user.get();
 
+        List<SendMessage> messages = new ArrayList<>();
+
         final var s = text.split(" ");
         if (s.length > 2){
             sendMessage.setText("Неправильно введены данные");
             admin.setPosition("start");
             userService.save(admin);
-            return sendMessage;
+
+            messages.add(sendMessage);
+            return messages;
         }
 
         String prizeName = s[0];
@@ -115,8 +128,18 @@ public class AdminPanel {
         admin.setPosition("start");
         userService.save(admin);
 
-        sendMessage.setText("Создан аукцион!");
-        return sendMessage;
+        final var all = userService.findAll();
+
+        String textForUsers = "Создан новый лот: " + auction.getThingName();
+
+        for (User u : all){
+            sendMessage = new SendMessage();
+            sendMessage.setChatId(String.valueOf(u.getUserId()));
+            sendMessage.setText(textForUsers);
+            messages.add(sendMessage);
+        }
+
+        return messages;
     }
 
     public SendMessage usersToday(Update update){
@@ -216,6 +239,42 @@ public class AdminPanel {
 
         sendMessage.setText("Приз выдан");
         return sendMessage;
+    }
+
+    public SendMessage addMoney(Update update){
+        String userId = String.valueOf(update.getMessage().getFrom().getId());
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(userId);
+        sendMessage.setText("Введите через пробел сумму и username \n" +
+                "Пример: 1000 hypelil");
+
+        User user = userService.findById(Integer.valueOf(userId)).get();
+        user.setPosition("add_money");
+        userService.save(user);
+
+        return sendMessage;
+    }
+
+    public SendMessage addMoneyImpl(Update update){
+        String userId = String.valueOf(update.getMessage().getFrom().getId());
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(userId);
+
+        User admin = userService.findById(Integer.valueOf(userId)).get();
+
+        String money = update.getMessage().getText().split(" ")[0];
+        String username = update.getMessage().getText().split(" ")[1];
+
+        User user = userService.findByUsername("@" + username);
+        user.setMoney(Double.parseDouble(money));
+        userService.save(user);
+
+        admin.setPosition("start");
+        userService.save(admin);
+        userService.save(admin);
+
+        sendMessage.setText("Деньги зачислены");
+        return adminMenu(sendMessage);
     }
 
     public SendMessage exit(Update update){

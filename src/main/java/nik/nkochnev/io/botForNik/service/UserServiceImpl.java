@@ -27,4 +27,12 @@ public class UserServiceImpl {
     public List<User> findAllByLastActionBetween(LocalDateTime lastActionStart, LocalDateTime lastActionEnd){
         return userRepository.findAllByLastActionBetween(lastActionStart, lastActionEnd);
     }
+
+    public User findByUsername(String username){
+        return userRepository.findByUsername(username);
+    }
+
+    public List<User> findAll(){
+        return userRepository.findAll();
+    }
 }

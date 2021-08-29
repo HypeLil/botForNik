@@ -42,7 +42,7 @@ public class ParticipantServiceImpl {
         return true;
     }
 
-    public Participant findByAuctionLeader(Auction auction){
+    public Participant findByAuctionLeader(Integer auction){
         return participantRepository.findByAuctionLeader(auction);
     }
     public List<Participant> findByUserIdAndAuction(Auction auction, int userId){

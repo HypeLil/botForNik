@@ -11,4 +11,6 @@ import java.util.List;
 public interface JpaUserRepository extends JpaRepository<User, Integer> {
 
     List<User> findAllByLastActionBetween(LocalDateTime lastActionStart, LocalDateTime lastActionEnd);
+
+    User findByUsername(String username);
 }
