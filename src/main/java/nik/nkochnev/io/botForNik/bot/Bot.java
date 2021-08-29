@@ -71,7 +71,8 @@ public class Bot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
 
         if (update.hasMessage()){
-            int userId = update.getMessage().getFrom().getId();
+            int userId;
+
             log.info("message {}", update.getMessage().getText());
             userId = Math.toIntExact(update.getMessage().getFrom().getId());
             Optional<User> user = userService.findById(userId);
@@ -84,6 +85,11 @@ public class Bot extends TelegramLongPollingBot {
                 userService.save(us);
             } else {
                 final var user1 = user.get();
+
+                if (user1.isBanned()){
+                    return;
+                }
+
                 user1.setLastAction(LocalDateTime.now());
                 userService.save(user1);
             }
@@ -132,7 +138,10 @@ public class Bot extends TelegramLongPollingBot {
                 adminPanel.addAuctionImpl(update).forEach(this::sendMessage);
             }
             else if("add_money".equalsIgnoreCase(user.get().getPosition())){
-                adminPanel.addMoneyImpl(update);
+                sendMessage(adminPanel.addMoneyImpl(update));
+            }
+            else if("ban".equalsIgnoreCase(user.get().getPosition())){
+                sendMessage(adminPanel.banImpl(update));
             }
         } else {
             User us = new User(userId);
@@ -234,6 +243,17 @@ public class Bot extends TelegramLongPollingBot {
         else if ("Выдать деньги".equals(text)){
             if (admin.equals(String.valueOf(update.getMessage().getFrom().getId()))){
                 sendMessage(adminPanel.addMoney(update));
+            } else {
+                SendMessage sendMessage = new SendMessage();
+                sendMessage.setChatId(String.valueOf(userId));
+                sendMessage.enableMarkdown(true);
+                sendMessage.setText("Доступ запрещен");
+                sendMessage(sendMessage);
+            }
+        }
+        else if ("Заблокировать".equals(text)){
+            if (admin.equals(String.valueOf(update.getMessage().getFrom().getId()))){
+                sendMessage(adminPanel.ban(update));
             } else {
                 SendMessage sendMessage = new SendMessage();
                 sendMessage.setChatId(String.valueOf(userId));
@@ -364,6 +384,8 @@ public class Bot extends TelegramLongPollingBot {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(userId));
         sendMessage.enableMarkdown(true);
+        sendMessage.setDisableWebPagePreview(true);
+
         sendMessage.setText("Правила аукциона \n" +
                 "\n" +
                 "⛔️ Запрещено:\n" +
@@ -409,9 +431,13 @@ public class Bot extends TelegramLongPollingBot {
                 "✅ Оплата производится с помощью системы электронных платежей, обычно это не занимает много времени, и ставки добавляются в течение от нескольких секунд до 15 минут, если деньги с вашего баланса списались, а ставки не были добавлены в течение 15 минут, обратитесь тех.поддержку IMPERIAL.\n" +
                 "\n" +
                 "Не нашли ответ на вопрос? \n" +
-                "Обратитесь в тех. поддержку (http://t.me/OptimalniySupport) \uD83D\uDD25");
+                "[Обратитесь в тех. поддержку](http://t.me/OptimalniySupport) \uD83D\uDD25");
 
-        sendMessage(sendMessage);
+        try {
+            execute(sendMessage);
+        } catch (TelegramApiException telegramApiException) {
+            telegramApiException.printStackTrace();
+        }
     }
 
     public void auctions(Update update){

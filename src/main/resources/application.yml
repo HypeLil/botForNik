@@ -1,7 +1,7 @@
 bot:
-  token: 1948159044:AAF38Q3ppgPla7KtQuWtVuGMxLRKa2in9cU
+  token: 1990692779:AAFWTS6bPTFBIXM3k__ZPspz7zefq5giSb8
   name: Optimalniy_auctionbot
-  admin: 1606597502
+  admin: 213411446
   merchantId: 100
 server:
   port: 8072
@@ -18,9 +18,11 @@ spring:
   datasource:
     #  Note that the hostname, port and database name on url property and username and password properties will be ignored
     #  and it will be used default container values
-    url: jdbc:postgresql://localhost:5432/botter?user=postgres&password=91823God&currentSchema=public
+
+    url: jdbc:postgresql://localhost:5555/bo1?user=postgres&password=91823God&currentSchema=public
+#    url: jdbc:postgresql://localhost:5432/botter?user=postgres&password=91823God&currentSchema=public
     driver-class-name: org.postgresql.Driver
-    username: nikita
+    username: postgres
     password: 91823God
     hikari:
       schema: public

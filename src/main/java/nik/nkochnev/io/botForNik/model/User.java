@@ -39,11 +39,15 @@ public class User {
     @Column(name = "last_action")
     private LocalDateTime lastAction;
 
+    @Column(name = "banned")
+    private boolean banned;
+
     public User(int userId) {
         this.userId = userId;
         this.regDate = LocalDateTime.now();
         this.money = 0;
         this.position = "start";
+        this.banned = false;
     }
 
     @OneToMany(

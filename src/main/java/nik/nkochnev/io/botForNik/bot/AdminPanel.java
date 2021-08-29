@@ -11,6 +11,7 @@ import nik.nkochnev.io.botForNik.service.UserServiceImpl;
 import nik.nkochnev.io.botForNik.service.WinnerService;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
@@ -61,6 +62,9 @@ public class AdminPanel {
         KeyboardRow keyboardRow5 = new KeyboardRow();
         KeyboardButton keyboardButton5 = new KeyboardButton("Выдать деньги");
         keyboardRow5.add(keyboardButton5);
+
+        KeyboardButton keyboardButton6 = new KeyboardButton("Заблокировать");
+        keyboardRow5.add(keyboardButton6);
 
         KeyboardRow keyboardRow3 = new KeyboardRow();
         KeyboardButton keyboardButton3 = new KeyboardButton("Выйти в меню");
@@ -266,15 +270,54 @@ public class AdminPanel {
         String username = update.getMessage().getText().split(" ")[1];
 
         User user = userService.findByUsername("@" + username);
-        user.setMoney(Double.parseDouble(money));
+        user.setMoney(user.getMoney() + Double.parseDouble(money));
         userService.save(user);
 
         admin.setPosition("start");
         userService.save(admin);
-        userService.save(admin);
 
         sendMessage.setText("Деньги зачислены");
+
         return adminMenu(sendMessage);
+    }
+
+    public SendMessage ban(Update update){
+        String userId = String.valueOf(update.getMessage().getFrom().getId());
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(userId);
+
+        User admin = userService.findById(Integer.valueOf(userId)).get();
+        admin.setPosition("ban");
+        userService.save(admin);
+
+        sendMessage.setText("Введите username\n" +
+                "Пример: hypelil");
+        return sendMessage;
+    }
+
+    public SendMessage banImpl(Update update){
+        String userId = String.valueOf(update.getMessage().getFrom().getId());
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(userId);
+
+        User admin = userService.findById(Integer.valueOf(userId)).get();
+        admin.setPosition("start");
+        userService.save(admin);
+
+        String userIdForBan = update.getMessage().getText();
+        User user = userService.findByUsername("@" + userIdForBan);
+
+        if (user == null){
+            sendMessage.setText("Юзер не найден");
+            return sendMessage;
+        }
+
+        System.out.println(user.getUserId());
+        user.setBanned(true);
+        userService.save(user);
+
+        sendMessage.setText("Юзер забанен");
+        return sendMessage;
     }
 
     public SendMessage exit(Update update){
